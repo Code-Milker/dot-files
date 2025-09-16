@@ -2,7 +2,7 @@ after-login-command = [
 ]
 
 after-startup-command = [
-  'exec-and-forget borders active_color=0xff2ecc71 width=7.0',
+  'exec-and-forget borders active_color=0xff2ecc71 width=10.0',
   'exec-and-forget open -a "Ghostty"',
 ]
 
@@ -22,11 +22,11 @@ key-mapping.preset = 'qwerty'
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
 [gaps]
-inner.horizontal = 0 
-inner.vertical =   0
+inner.horizontal = 35 
+inner.vertical =   35
 outer.left =       0
-outer.bottom =     0
-outer.top =        0
+outer.bottom =     35
+outer.top =        35
 outer.right =      0
 
 [mode.main.binding]
