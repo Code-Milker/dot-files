@@ -1,0 +1,49 @@
+
+# ghostty +list-fonts
+
+font-size = 22
+
+# monospace
+# https://usgraphics.com/products/berkeley-mono
+font-family = "Berkeley Mono Variable"
+font-variation = wght=300
+font-variation = wdth=100
+font-family-bold = "Berkeley Mono Variable"
+font-variation-bold = wght=800
+
+# italics
+# https://github.com/subframe7536/maple-font
+font-family-italic = "Maple Mono"
+font-variation-italic = wght=200
+font-family-bold-italic = "Maple Mono"
+font-variation-bold-italic = wght=800
+
+window-title-font-family = "Berkeley Mono Variable"
+
+alpha-blending = linear-corrected
+
+macos-titlebar-style = hidden
+macos-titlebar-proxy-icon = hidden
+macos-option-as-alt = true
+
+background-opacity = 0.90
+background-blur-radius = 40
+
+
+mouse-hide-while-typing = true
+
+window-inherit-working-directory = false
+working-directory = home
+
+# keymaps
+keybind = global:cmd+shift+t=toggle_quick_terminal
+keybind = cmd+t=toggle_split_zoom
+keybind = cmd+shift+s=new_split:down
+keybind = cmd+shift+v=new_split:right
+
+keybind = cmd+y=goto_split:next
+
+keybind = cmd+e=equalize_splits
+keybind = cmd+shift+r=reload_config
+keybind = cmd+shift+c=open_config
+# split-fade-opacity = 0.7
