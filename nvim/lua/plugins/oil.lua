@@ -20,7 +20,7 @@ return {
     dependencies = { "nvim-tree/nvim-web-devicons" },
     keys = {
       {
-        "<leader>e",
+        "<leader>ee",
         function()
           local util = require("lazyvim.util")
           require("oil").open_float(util.root.get())
@@ -28,13 +28,12 @@ return {
         desc = "Open Oil File Explorer at Project Root",
       },
       {
-        "<leader>fo", -- Change to your preferred available key (e.g., <leader>od for "Oil Dirs")
+        "<leader>ef", -- Change to your preferred available key (e.g., <leader>od for "Oil Dirs")
         function()
           local util = require("lazyvim.util")
           local root = util.root.get()
           require("fzf-lua").fzf_exec(
-            "fd --type d --max-depth 3 --min-depth 2 --absolute-path . "
-              .. vim.fn.shellescape(root),
+            "fd --type d --max-depth 3 --min-depth 2 --absolute-path . " .. vim.fn.shellescape(root),
             {
               actions = {
                 ["default"] = function(selected)
@@ -57,7 +56,7 @@ return {
         desc = "Fzf child dirs of project root and open in Oil",
       },
       {
-        "<leader>E",
+        "<leader>ec",
         function()
           local util = require("lazyvim.util")
           require("oil").open_float()

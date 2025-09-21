@@ -1,18 +1,7 @@
--- Define lazy.nvim path
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
--- Bootstrap lazy.nvim if not installed
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local lazyrepo = "https://github.com/folke/lazy.nvim.git"
-  local out = vim.fn.system({
-    "git",
-    "clone",
-    "--filter=blob:none",
-    "--branch=stable",
-    lazyrepo,
-    lazypath,
-  })
-
-  -- Handle cloning errors
+  local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
   if vim.v.shell_error ~= 0 then
     vim.api.nvim_echo({
       { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
@@ -23,42 +12,37 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
     os.exit(1)
   end
 end
-
--- Add lazy.nvim to runtime path
 vim.opt.rtp:prepend(lazypath)
-vim.g.lazyvim_picker = "fzf"
--- Configure lazy.nvim
+
 require("lazy").setup({
-  -- Plugin specifications
   spec = {
-    -- LazyVim base configuration
+    -- add LazyVim and import its plugins
     { "LazyVim/LazyVim", import = "lazyvim.plugins" },
-    { import = "lazyvim.plugins.extras.lang.typescript" },
+    -- import/override with your plugins
     { import = "plugins" },
   },
-
-  -- Default settings for all plugins
   defaults = {
-    lazy = true, -- Load plugins immediately
-    version = false, -- Use latest version instead of pinned
+    -- By default, only LazyVim plugins will be lazy-loaded. Your custom plugins will load during startup.
+    -- If you know what you're doing, you can set this to `true` to have all your custom plugins lazy-loaded by default.
+    lazy = false,
+    -- It's recommended to leave version=false for now, since a lot the plugin that support versioning,
+    -- have outdated releases, which may break your Neovim install.
+    version = false, -- always use the latest git commit
+    -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
-
-  -- Installation settings
-  install = {
-    colorscheme = { "savq/melange-nvim" }, -- Preferred colorschemes
-  },
-
-  -- Automatic update checker
+  install = { colorscheme = { "tokyonight", "habamax" } },
   checker = {
-    enabled = true, -- Enable automatic checking
-    notify = false, -- Disable update notifications
-  },
-
-  -- Performance optimizations
+    enabled = true, -- check for plugin updates periodically
+    notify = false, -- notify on update
+  }, -- automatically check for plugin updates
   performance = {
     rtp = {
-      disabled_plugins = { -- Disable built-in plugins
+      -- disable some rtp plugins
+      disabled_plugins = {
         "gzip",
+        -- "matchit",
+        -- "matchparen",
+        -- "netrwPlugin",
         "tarPlugin",
         "tohtml",
         "tutor",
@@ -67,3 +51,5 @@ require("lazy").setup({
     },
   },
 })
+require("config.terminal")
+require("config.prompt")

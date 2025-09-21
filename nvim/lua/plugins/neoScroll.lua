@@ -1,21 +1,22 @@
-return {
-  {
-    "karb94/neoscroll.nvim",
-    event = "VeryLazy", -- Lazy-load on startup
-    opts = {
-      mappings = {
-        "<C-u>",
-        "<C-d>",
-        "<C-b>",
-        "<C-f>",
-        "<C-y>",
-        "<C-e>",
-        "zt",
-        "zz",
-        "zb",
-      }, -- Default keys to smooth-scroll
-      easing = "sine", -- Or "quadratic", "circular" for different animations
-      hide_cursor = true, -- Hide cursor during scroll for immersion
-    },
-  },
-}
+return { {} }
+-- return {
+--   {
+--     "karb94/neoscroll.nvim",
+--     event = "VeryLazy", -- Lazy-load on startup
+--     opts = {
+--       mappings = {
+--         "<C-u>",
+--         "<C-d>",
+--         "<C-b>",
+--         "<C-f>",
+--         "<C-y>",
+--         "<C-e>",
+--         "zt",
+--         "zz",
+--         "zb",
+--       }, -- Default keys to smooth-scroll
+--       easing = "sine", -- Or "quadratic", "circular" for different animations
+--       hide_cursor = true, -- Hide cursor during scroll for immersion
+--     },
+--   },
+-- }
