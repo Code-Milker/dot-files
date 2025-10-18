@@ -4,6 +4,7 @@ local function copy_all_buffers_to_clipboard()
   local contents = {}
   local total_bufs = 0
   local cwd = vim.fn.getcwd()
+
   -- Count valid buffers first
   for _, buf in ipairs(bufs) do
     if vim.api.nvim_buf_is_loaded(buf) and vim.api.nvim_get_option_value("buftype", { buf = buf }) == "" then
@@ -13,6 +14,7 @@ local function copy_all_buffers_to_clipboard()
       end
     end
   end
+
   -- Collect buffer contents
   local index = 1
   for _, buf in ipairs(bufs) do
@@ -42,6 +44,7 @@ local function copy_all_buffers_to_clipboard()
       end
     end
   end
+
   -- Combine all contents and copy to clipboard
   if #contents > 0 then
     local final_content = table.concat(contents, "\n\n---\n\n")
@@ -51,6 +54,7 @@ local function copy_all_buffers_to_clipboard()
     print("No valid buffers to copy.")
   end
 end
+
 vim.keymap.set(
   "n",
   "<leader>pa",
@@ -58,52 +62,17 @@ vim.keymap.set(
   { noremap = true, silent = true, desc = "Copy all buffers to clipboard" }
 )
 
--- Helper function for pure Lua directory tree (fallback)
-local function generate_dir_tree(dir, depth, prefix)
-  depth = depth or 2
-  if depth <= 0 then
-    return {}
-  end
-  local lines = {}
-  local files = vim.fn.readdir(dir, [[v:val !~ '^\.' and v:val != 'node_modules' and v:val != '.git']]) -- Exclude hidden, node_modules, .git
-  table.sort(files, function(a, b)
-    local a_dir = vim.fn.isdirectory(dir .. "/" .. a) == 1
-    local b_dir = vim.fn.isdirectory(dir .. "/" .. b) == 1
-    if a_dir and not b_dir then
-      return true
-    end
-    if not a_dir and b_dir then
-      return false
-    end
-    return a < b
-  end)
-  for i, file in ipairs(files) do
-    local is_dir = vim.fn.isdirectory(dir .. "/" .. file) == 1
-    local line = prefix .. (i == #files and "└── " or "├── ") .. file
-    table.insert(lines, line)
-    if is_dir then
-      local sub_lines = generate_dir_tree(dir .. "/" .. file, depth - 1, prefix .. (i == #files and "    " or "│   "))
-      vim.list_extend(lines, sub_lines)
-    end
-  end
-  return lines
-end
-
 local function copy_project_tree_to_clipboard()
-  local cwd = vim.fn.getcwd()
-  local tree_output = vim.fn.system("tree -L 2 --dirsfirst") -- Try external 'tree' first
-  if vim.v.shell_error == 0 then
-    tree_output = tree_output:gsub("\n$", "") -- Trim trailing newline
-  else
-    -- Fallback to pure Lua tree
-    local lines = { vim.fn.fnamemodify(cwd, ":t") }
-    vim.list_extend(lines, generate_dir_tree(cwd, 2, ""))
-    tree_output = table.concat(lines, "\n")
+  local tree_output = vim.fn.system("tree -L 2 --dirsfirst") -- Adjust depth with -L
+  if vim.v.shell_error ~= 0 then
+    print("Error generating tree (ensure 'tree' command is installed).")
+    return
   end
-  local formatted = string.format("## Project Directory Tree (from %s)\n\n```\n%s\n```", cwd, tree_output)
+  local formatted = string.format("## Project Directory Tree (from %s)\n\n```\n%s\n```", vim.fn.getcwd(), tree_output)
   vim.fn.setreg("+", formatted)
   print("Copied project tree to clipboard.")
 end
+
 vim.keymap.set(
   "n",
   "<leader>pt",
@@ -136,6 +105,7 @@ local function copy_current_buffer_to_clipboard()
   vim.fn.setreg("+", formatted)
   print("Copied current buffer to clipboard.")
 end
+
 vim.keymap.set(
   "n",
   "<leader>pc",
@@ -161,27 +131,22 @@ local function copy_diagnostics_to_clipboard()
   vim.fn.setreg("+", formatted)
   print("Copied " .. #diagnostics .. " diagnostic(s) to clipboard.")
 end
+
 vim.keymap.set(
   "n",
   "<leader>pd",
   copy_diagnostics_to_clipboard,
   { noremap = true, silent = true, desc = "Copy diagnostics to clipboard" }
 )
-
--- Function to generate a Markdown file for LLM prompting
 local function generate_prompt_md()
   local cwd = vim.fn.getcwd()
   local md_file = cwd .. "/prompt.md" -- Output file in current directory
 
   -- Get project tree
-  local tree_output = vim.fn.system("tree -L 2 --dirsfirst") -- Try external 'tree' first
-  if vim.v.shell_error == 0 then
-    tree_output = tree_output:gsub("\n$", "") -- Trim trailing newline
-  else
-    -- Fallback to pure Lua tree
-    local lines = { vim.fn.fnamemodify(cwd, ":t") }
-    vim.list_extend(lines, generate_dir_tree(cwd, 2, ""))
-    tree_output = table.concat(lines, "\n")
+  local tree_output = vim.fn.system("tree -L 2 --dirsfirst") -- Adjust depth as needed
+  if vim.v.shell_error ~= 0 then
+    print("Error generating tree (ensure 'tree' command is installed).")
+    return
   end
   local tree_section = string.format("## Project Directory Tree (from %s)\n\n```\n%s\n```", cwd, tree_output)
 
@@ -274,4 +239,62 @@ vim.keymap.set(
   "<leader>pm",
   generate_prompt_md,
   { noremap = true, silent = true, desc = "Generate prompt.md with context" }
+)
+
+local function copy_src_files_to_clipboard()
+  local cwd = vim.fn.getcwd()
+  local src_dir = cwd .. "/src"
+  if vim.fn.isdirectory(src_dir) == 0 then
+    print("src/ directory not found.")
+    return
+  end
+  -- Get all files recursively in src/
+  local files = vim.fn.globpath(src_dir, "**", false, true)
+  local contents = {}
+  local total_files = 0
+  -- Count valid files first
+  for _, file in ipairs(files) do
+    if vim.fn.isdirectory(file) == 0 and vim.fn.filereadable(file) == 1 then
+      total_files = total_files + 1
+    end
+  end
+  -- Collect file contents
+  local index = 1
+  for _, file in ipairs(files) do
+    if vim.fn.isdirectory(file) == 0 and vim.fn.filereadable(file) == 1 then
+      -- Get relative path from CWD
+      local rel_path = vim.fn.fnamemodify(file, ":.")
+      -- Detect filetype
+      local filetype = vim.filetype.match({ filename = file }) or "text"
+      -- Read content
+      local lines = vim.fn.readfile(file)
+      local content = table.concat(lines, "\n")
+      -- Format header and content with Markdown
+      local formatted = string.format(
+        "## File: %s (%d/%d)\n**Filetype:** %s\n\n```%s\n%s\n```",
+        rel_path,
+        index,
+        total_files,
+        filetype,
+        filetype,
+        content
+      )
+      table.insert(contents, formatted)
+      index = index + 1
+    end
+  end
+  -- Combine all contents and copy to clipboard
+  if #contents > 0 then
+    local final_content = table.concat(contents, "\n\n---\n\n")
+    vim.fn.setreg("+", final_content)
+    print("Copied " .. total_files .. " file(s) from src/ to clipboard.")
+  else
+    print("No valid files in src/ to copy.")
+  end
+end
+vim.keymap.set(
+  "n",
+  "<leader>ps",
+  copy_src_files_to_clipboard,
+  { noremap = true, silent = true, desc = "Copy all files in src/ to clipboard" }
 )

@@ -1,6 +1,7 @@
 return {
   {
     "nvim-treesitter/nvim-treesitter",
+    { import = "lazyvim.plugins.extras.lang.svelte" },
     opts = {
       ensure_installed = {
         "bash",
@@ -17,6 +18,9 @@ return {
         "typescript",
         "vim",
         "yaml",
+        "svelte",
+        "tailwind",
+        "css",
       },
     },
   },
