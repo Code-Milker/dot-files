@@ -298,3 +298,81 @@ vim.keymap.set(
   copy_src_files_to_clipboard,
   { noremap = true, silent = true, desc = "Copy all files in src/ to clipboard" }
 )
+-- Function to copy the output from the last executed command in the terminal buffer to clipboard
+local function copy_last_terminal_command_output_to_clipboard()
+  local term_bufs = {}
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf) and vim.api.nvim_get_option_value("buftype", { buf = buf }) == "terminal" then
+      table.insert(term_bufs, buf)
+    end
+  end
+  if #term_bufs == 0 then
+    print("No terminal buffers found.")
+    return
+  end
+  -- Sort by buffer number descending to get the most recent
+  table.sort(term_bufs, function(a, b)
+    return a > b
+  end)
+  local last_term_buf = term_bufs[1]
+  local lines = vim.api.nvim_buf_get_lines(last_term_buf, 0, -1, false)
+  if #lines == 0 then
+    print("No content in the last terminal buffer.")
+    return
+  end
+  local prompt_pattern = "^tylerfischer@MacBookPro"
+  -- Find the positions of prompts from the end
+  local prompt_positions = {}
+  for i = #lines, 1, -1 do
+    if lines[i]:match(prompt_pattern) then
+      table.insert(prompt_positions, i)
+      if #prompt_positions == 2 then -- We need the last two prompts
+        break
+      end
+    end
+  end
+  if #prompt_positions < 2 then
+    -- If less than 2 prompts, take from the first prompt's next line to end
+    if #prompt_positions == 1 then
+      local start_line = prompt_positions[1] + 1
+      local output_lines = {}
+      for j = start_line, #lines do
+        table.insert(output_lines, lines[j])
+      end
+      local content = table.concat(output_lines, "\n")
+      if vim.trim(content) == "" then
+        print("No output from the last command.")
+        return
+      end
+      local formatted = string.format("## Last Terminal Command Output\n\n```\n%s\n```", vim.trim(content))
+      vim.fn.setreg("+", formatted)
+      print("Copied last terminal command output to clipboard.")
+      return
+    else
+      print("No prompts found in terminal buffer.")
+      return
+    end
+  end
+  -- Last prompt is prompt_positions[1] (current, possibly empty)
+  -- Previous prompt is prompt_positions[2]
+  local start_line = prompt_positions[2] + 1 -- Start after the previous prompt (skip command line)
+  local end_line = prompt_positions[1] - 1 -- End before the current prompt
+  local output_lines = {}
+  for i = start_line, end_line do
+    table.insert(output_lines, lines[i])
+  end
+  local content = table.concat(output_lines, "\n")
+  if vim.trim(content) == "" then
+    print("No output from the last command.")
+    return
+  end
+  local formatted = string.format("## Last Terminal Command Output\n\n```\n%s\n```", vim.trim(content))
+  vim.fn.setreg("+", formatted)
+  print("Copied last terminal command output to clipboard.")
+end
+vim.keymap.set(
+  "n",
+  "<leader>po",
+  copy_last_terminal_command_output_to_clipboard,
+  { noremap = true, silent = true, desc = "Copy last terminal command output to clipboard" }
+)

@@ -53,3 +53,4 @@ require("lazy").setup({
 })
 require("config.terminal")
 require("config.prompt")
+require("config.cliBan")

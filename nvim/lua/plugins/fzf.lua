@@ -8,8 +8,8 @@ return {
           width = 1,
           height = 1,
           preview = {
-            layout = "vertical",
-            vertical = "right:50%", -- Adjust the percentage for preview width as needed (e.g., 50% for equal split)
+            layout = "horizontal",
+            -- vertical = "right:80%", -- Adjust the percentage for preview width as needed (e.g., 50% for equal split)
             wrap = true,
           },
         },
