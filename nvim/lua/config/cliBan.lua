@@ -165,6 +165,115 @@ vim.keymap.set("n", "<leader>ku", function()
     },
   })
 end, { desc = "Update task: Search and edit" })
+-- Keymap for delete: Search tasks with fzf and delete selected
+vim.keymap.set("n", "<leader>kd", function()
+  local cmd = string.format("cd %s && bun run cli:getTasks", dir)
+  local output = vim.fn.system(cmd)
+  if vim.v.shell_error ~= 0 then
+    print("Error listing tasks: " .. output)
+    return
+  end
+  -- Strip leading junk if present (e.g., "$ bun ..." line)
+  local lines = vim.split(output, "\n")
+  if #lines > 0 and lines[1]:match("^%s*%$ bun") then
+    table.remove(lines, 1)
+  end
+  output = table.concat(lines, "\n")
+  output = vim.trim(output)
+  if #output == 0 then
+    print("Empty output from command")
+    return
+  end
+  local success, tasks = pcall(vim.json.decode, output)
+  if not success then
+    print("JSON decode error: " .. tasks)
+    print("Raw output: " .. output)
+    return
+  end
+  if not tasks or #tasks == 0 then
+    print("No tasks found!")
+    return
+  end
+  -- Create fzf entries: "id\ttitle (category) [section]"
+  local entries = {}
+  for _, task in ipairs(tasks) do
+    table.insert(entries, string.format("%d\t%s (%s) [%s]", task.id, task.title, task.category, task.section))
+  end
+  -- Function to find task by id
+  local function get_task_by_id(id)
+    for _, t in ipairs(tasks) do
+      if t.id == id then
+        return t
+      end
+    end
+  end
+  fzf.fzf_exec(entries, {
+    prompt = "Select task to delete> ",
+    actions = {
+      ["default"] = function(selected)
+        if not selected or not selected[1] then
+          return
+        end
+        local id = tonumber(selected[1]:match("^(%d+)"))
+        local task = get_task_by_id(id)
+        if not task then
+          print("Task not found!")
+          return
+        end
+        -- Confirm deletion
+        local confirm = vim.fn.input("Delete task '" .. task.title .. "'? (y/n): ")
+        if confirm:lower() ~= "y" then
+          print("Deletion cancelled.")
+          return
+        end
+        local payload = { id = id }
+        local json_str = vim.json.encode(payload)
+        local delete_cmd = string.format("cd %s && echo '%s' | bun run cli:deleteTask", dir, json_str)
+        local delete_output = vim.fn.system(delete_cmd)
+        if vim.v.shell_error ~= 0 then
+          print("Error deleting task: " .. delete_output)
+          return
+        end
+        -- Open the updated MD buffer
+        local md_lines = vim.split(delete_output, "\n", { trimempty = true })
+        local md_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(md_buf, 0, -1, false, md_lines)
+        vim.api.nvim_set_option_value("buftype", "nofile", { buf = md_buf })
+        vim.api.nvim_set_option_value("filetype", "markdown", { buf = md_buf })
+        vim.api.nvim_set_current_buf(md_buf)
+        print("Task deleted!")
+      end,
+    },
+    preview = {
+      fn = function(items)
+        if not items or not items[1] then
+          return {}
+        end
+        local id = tonumber(items[1]:match("^(%d+)"))
+        local task = get_task_by_id(id)
+        if not task then
+          return { "No details available" }
+        end
+        local contents = {
+          string.format("ID: %d", task.id),
+          string.format("Category: %s", task.category),
+          string.format("Title: %s", task.title),
+          string.format("Section: %s", task.section),
+          "Attributes:",
+        }
+        for key, values in pairs(task.attributes) do
+          for _, val in ipairs(values) do
+            table.insert(contents, string.format("- %s: %s", key, val))
+          end
+        end
+        return contents
+      end,
+    },
+    fzf_opts = {
+      ["--preview-window"] = "right:50%",
+    },
+  })
+end, { desc = "Delete task: Search and delete" })
 -- Keymap to submit the template (add or update based on mode)
 vim.keymap.set("n", "<leader>ks", function()
   local buf = vim.api.nvim_get_current_buf()
