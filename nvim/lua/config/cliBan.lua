@@ -23,12 +23,106 @@ vim.keymap.set("n", "<leader>kg", function()
     return
   end
   local lines = vim.split(output, "\n", { trimempty = true })
-  local buf = vim.api.nvim_create_buf(false, true) -- false: not listed in buffer list, true: scratch buffer
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
-  vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
-  vim.api.nvim_set_current_buf(buf)
-end, { desc = "Get and open Kanban in buffer" })
+  -- Parse lines into sections
+  local todo_lines = {}
+  local doing_lines = {}
+  local done_lines = {}
+  local current_section = nil
+  for _, line in ipairs(lines) do
+    if line:match("^# TODO") then
+      current_section = todo_lines
+    elseif line:match("^# DOING") then
+      current_section = doing_lines
+    elseif line:match("^# DONE") then
+      current_section = done_lines
+    end
+    if current_section then
+      table.insert(current_section, line)
+    end
+  end
+  -- Create buffers
+  local todo_buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(todo_buf, 0, -1, false, todo_lines)
+  vim.api.nvim_buf_set_option(todo_buf, "buftype", "nofile")
+  vim.api.nvim_buf_set_option(todo_buf, "filetype", "markdown")
+  vim.api.nvim_buf_set_option(todo_buf, "modifiable", false)
+
+  local doing_buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(doing_buf, 0, -1, false, doing_lines)
+  vim.api.nvim_buf_set_option(doing_buf, "buftype", "nofile")
+  vim.api.nvim_buf_set_option(doing_buf, "filetype", "markdown")
+  vim.api.nvim_buf_set_option(doing_buf, "modifiable", false)
+
+  local done_buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(done_buf, 0, -1, false, done_lines)
+  vim.api.nvim_buf_set_option(done_buf, "buftype", "nofile")
+  vim.api.nvim_buf_set_option(done_buf, "filetype", "markdown")
+  vim.api.nvim_buf_set_option(done_buf, "modifiable", false)
+
+  -- Dimensions
+  local total_width = vim.o.columns
+  local total_height = vim.o.lines
+  local panel_width = math.floor(total_width / 3) - 4
+  local panel_height = total_height - 10
+  local row = math.floor((total_height - panel_height) / 2) - 1
+  local total_occupied = 3 * panel_width + 4
+  local left_col = math.floor((total_width - total_occupied) / 2)
+
+  -- Window configs
+  local config_todo = {
+    relative = "editor",
+    row = row,
+    col = left_col,
+    width = panel_width,
+    height = panel_height,
+    border = "single",
+    style = "minimal",
+    title = "TODO",
+    title_pos = "center",
+  }
+  local config_doing = {
+    relative = "editor",
+    row = row,
+    col = left_col + panel_width + 2,
+    width = panel_width,
+    height = panel_height,
+    border = "single",
+    style = "minimal",
+    title = "DOING",
+    title_pos = "center",
+  }
+  local config_done = {
+    relative = "editor",
+    row = row,
+    col = left_col + 2 * (panel_width + 2),
+    width = panel_width,
+    height = panel_height,
+    border = "single",
+    style = "minimal",
+    title = "DONE",
+    title_pos = "center",
+  }
+
+  -- Open windows
+  local todo_win = vim.api.nvim_open_win(todo_buf, false, config_todo)
+  local doing_win = vim.api.nvim_open_win(doing_buf, false, config_doing)
+  local done_win = vim.api.nvim_open_win(done_buf, false, config_done)
+
+  -- Focus the middle one
+  vim.api.nvim_set_current_win(doing_win)
+
+  -- Close function
+  local function close_kanban()
+    pcall(vim.api.nvim_win_close, todo_win, true)
+    pcall(vim.api.nvim_win_close, doing_win, true)
+    pcall(vim.api.nvim_win_close, done_win, true)
+  end
+
+  -- Set Esc keymap for each buffer
+  vim.keymap.set("n", "<Esc>", close_kanban, { buffer = todo_buf, silent = true })
+  vim.keymap.set("n", "<Esc>", close_kanban, { buffer = doing_buf, silent = true })
+  vim.keymap.set("n", "<Esc>", close_kanban, { buffer = done_buf, silent = true })
+end, { desc = "Get and open Kanban in popup with 3 buffers" })
 -- Keymap to open add-task template
 vim.keymap.set("n", "<leader>kt", function()
   local lines = vim.split(add_template, "\n", { trimempty = true })
@@ -98,19 +192,19 @@ vim.keymap.set("n", "<leader>ku", function()
         -- Build JSON template with current values and comments
         local template_lines = {
           "{",
-          string.format('  "id": %d, // Do not change this ID!', task.id),
+          string.format(' "id": %d, // Do not change this ID!', task.id),
           string.format(
-            '  "category": "%s", // Required: One of "Job", "Project", "Health", "Friend", "Fun", "Life"',
+            ' "category": "%s", // Required: One of "Job", "Project", "Health", "Friend", "Fun", "Life"',
             task.category
           ),
-          string.format('  "title": "%s", // Required: Non-empty string', task.title),
-          string.format('  "section": "%s", // Optional: "TODO", "DOING", or "DONE"', task.section),
-          '  "attributes": { // Optional: Add/remove keys as needed. Each value is an array of strings.',
+          string.format(' "title": "%s", // Required: Non-empty string', task.title),
+          string.format(' "section": "%s", // Optional: "TODO", "DOING", or "DONE"', task.section),
+          ' "attributes": { // Optional: Add/remove keys as needed. Each value is an array of strings.',
         }
         local attr_lines = {}
         for key, values in pairs(task.attributes) do
           local vals_str = vim.json.encode(values):gsub("^%[", ""):gsub("%]$", "")
-          table.insert(attr_lines, string.format('    "%s": [%s]', key, vals_str))
+          table.insert(attr_lines, string.format(' "%s": [%s]', key, vals_str))
         end
         for i, line in ipairs(attr_lines) do
           if i < #attr_lines then
@@ -121,10 +215,10 @@ vim.keymap.set("n", "<leader>ku", function()
         end
         table.insert(
           template_lines,
-          '    // Allowed keys: "goal", "done", "remaining", "note", "outcome", "deadline", "target"'
+          ' // Allowed keys: "goal", "done", "remaining", "note", "outcome", "deadline", "target"'
         )
-        table.insert(template_lines, '    // Example: "target": ["Milestone 1", "Milestone 2"]')
-        table.insert(template_lines, "  }")
+        table.insert(template_lines, ' // Example: "target": ["Milestone 1", "Milestone 2"]')
+        table.insert(template_lines, " }")
         table.insert(template_lines, "}")
         local buf = vim.api.nvim_create_buf(false, true) -- Scratch buffer
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, template_lines)
