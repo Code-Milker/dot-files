@@ -1,8 +1,7 @@
 return {
   {
     "yetone/avante.nvim",
-    build = vim.fn.has("win32") ~= 0
-        and "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource true"
+    build = vim.fn.has("win32") ~= 0 and "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource true"
       or "make",
     event = "VeryLazy",
     lazy = false, -- Optional: Load immediately if you want quick access
@@ -74,7 +73,7 @@ return {
       "MunifTanjim/nui.nvim", -- UI components
       "nvim-tree/nvim-web-devicons", -- Icons (alternative: "echasnovski/mini.icons")
       -- Optional for file selectors (pick one or more)
-      "echasnovski/mini.pick",
+      "nvim-mini/mini.pick",
       "nvim-telescope/telescope.nvim",
       -- Optional for autocompletion in commands/mentions
       "hrsh7th/nvim-cmp",
